@@ -7,15 +7,17 @@ parser.add_argument(
 args = parser.parse_args()
 taxa = ["Vicugna"]
 taxa = ["Primates"]
-taxa = ["Camelidae"]
 taxa = ["Piliocolobus_badius"]
-taxa = ["Bad"]
 taxa = ["Homininae"]
-taxa = ["Vicugna","Pan_paniscus"]
-taxa = ["Sylvilagus_nuttallii", "Trichechus_manatus", "Pan_paniscus", "Canis_lupus", "Ornithorhynchus_anatinus", "Discoglossus_montalentii", "Heterodontus_japonicus"]
+taxa = ["Vicugna", "Pan_paniscus"]
+taxa = ["Camelidae"]
+taxa = ["Sylvilagus_nuttallii", "Trichechus_manatus", "Pan_paniscus", "Canis_lupus",
+        "Ornithorhynchus_anatinus", "Discoglossus_montalentii", "Heterodontus_japonicus"]
+taxa = ["Bad"]
 
 tree = args.Tree_File.read()
 
+# We build the node list as we find them and process them
 nodes = []
 
 index = 0
@@ -47,17 +49,23 @@ while taxa or len(nodes) >= 2:
     if (match_taxon):
         taxon = match_taxon.group(1)
         if taxon in taxa:
+            # We've found a taxon, so remove it from the list, and create a node for it
             taxa.remove(taxon)
-            nodes.append({"tree_string": tree[start_index:index], "depth": len(index_stack)})
+            nodes.append(
+                {"tree_string": tree[start_index:index], "depth": len(index_stack)})
 
     if closed_brace:
-        lowered = [n for n in nodes if n["depth"] == len(index_stack)+1]
-        for node in lowered:
+        nodes_with_current_depth = [n for n in nodes if n["depth"] == len(index_stack) + 1]
+        for node in nodes_with_current_depth:
             node["depth"] -= 1
-            
-        if len(lowered) > 1:
-            nodes = [n for n in nodes if n not in lowered]
-            nodes.append({"tree_string": f"({lowered[0]['tree_string']},{lowered[1]['tree_string']}){match_full_name.group()}", "depth": len(index_stack)})
+
+        if len(nodes_with_current_depth) > 1:
+            # We've found at least two nodes that match the current depth, so remove them and wrap them in a new node
+            # TODO: handle polytomies when creating the new node
+            nodes = [n for n in nodes if n not in nodes_with_current_depth]
+            nodes.append(
+                {"tree_string": f"({nodes_with_current_depth[0]['tree_string']},{nodes_with_current_depth[1]['tree_string']}){match_full_name.group()}",
+                "depth": len(index_stack)})
 
     if tree[index] == ',':
         index += 1
