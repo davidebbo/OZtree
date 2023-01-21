@@ -5,15 +5,18 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument(
     "Tree_File", type=argparse.FileType('r'), help="A tree file in newick form")
 args = parser.parse_args()
-taxa = ["Vicugna"]
 taxa = ["Primates"]
 taxa = ["Piliocolobus_badius"]
 taxa = ["Homininae"]
 taxa = ["Vicugna", "Pan_paniscus"]
 taxa = ["Camelidae"]
+taxa = ["Bad"]
 taxa = ["Sylvilagus_nuttallii", "Trichechus_manatus", "Pan_paniscus", "Canis_lupus",
         "Ornithorhynchus_anatinus", "Discoglossus_montalentii", "Heterodontus_japonicus"]
-taxa = ["Bad"]
+taxa = ["Vicugna", "Homininae"]
+taxa = ["Rodentia", "Lagomorpha", "Primates", "Dermoptera", "Tupaia"]
+taxa = ["Glires", "Primates", "Scandentia"]
+taxa = ["Rodentia", "Lagomorpha", "Primates", "Dermoptera", "Tupaia"]
 
 tree = args.Tree_File.read()
 
@@ -39,6 +42,7 @@ while taxa or len(nodes) >= 2:
     if closed_brace:
         index += 1
         start_index = index_stack.pop()
+        # start_index = index
     else:
         start_index = index
 
