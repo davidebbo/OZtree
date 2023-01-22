@@ -1,49 +1,63 @@
 #!/usr/bin/env python3
-"""
-Transform an ultrametric newick tree into an additive newick tree
-"""
+'''
+Format a newick tree with indentation to make it more human readable. This is not meant for very large trees.
+
+For example, if the input tree is:
+
+(Tupaia_tana:8.5,(Tupaia_picta:8.0,(Tupaia_montana:7.0,Tupaia_splendidula:7.0):1.0):0.5):4.5;
+
+The output is:
+
+(
+  Tupaia_tana:8.5,
+  (
+    Tupaia_picta:8.0,
+    (
+      Tupaia_montana:7.0,
+      Tupaia_splendidula:7.0
+    ):1.0
+  ):0.5
+):4.5;
+'''
+
 import argparse
+import sys
 from dendropy import Tree
 
-parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument(
-    "OpenTree_file", type=argparse.FileType('r'), help="The ultrametric tree in newick form")
-# parser.add_argument(
-#     "outfile", type=argparse.FileType('w'), nargs='?', default=sys.stdout, help="The output tree")
+parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
+parser.add_argument('treefile', type=argparse.FileType('r'), nargs='?', default=sys.stdin, help='The tree file in newick form')
+parser.add_argument('outfile', type=argparse.FileType('w'), nargs='?', default=sys.stdout, help='The output tree file')
+parser.add_argument('--indent_spaces', '-i', default=2, type=int, help='the number of spaces for each indentation level')
 args = parser.parse_args()
 
-tree = Tree.get(stream=args.OpenTree_file, schema="newick", suppress_leaf_node_taxa=True)
-
-output_string = ""
-indent_string = "  "
-
-def get_full_label(node):
-    full_label = ""
-    if node.label:
-        full_label += node.label
-    if node.edge_length:
-        full_label += ":" + str(node.edge_length)
-    return full_label
+tree = Tree.get(stream=args.treefile, schema='newick', preserve_underscores=True, suppress_leaf_node_taxa=True, suppress_internal_node_taxa=True)
+output_stream = args.outfile
+indent_string = ' ' * args.indent_spaces
 
 def process_node(node, depth):
-    global output_string
-
-
+    output_stream.write(indent_string * depth)
 
     if len(node.child_nodes()) > 0:
-        output_string += indent_string * depth + "(\n"
+        output_stream.write('(\n')
 
+        # Go through children and process them recursively, increasing the depth
         for count, child_node in enumerate(node.child_nodes()):
             process_node(child_node, depth+1)
+
+            # Commas between the children
             if count < len(node.child_nodes())-1:
-                output_string += ","
-            output_string += "\n"
+                output_stream.write(',')
 
-        output_string += indent_string * depth + ")" + get_full_label(node)
-    else:
-        output_string += indent_string * depth + get_full_label(node)
+            output_stream.write('\n')
 
+        output_stream.write(indent_string * depth + ')')
+
+    if node.label:
+        output_stream.write(node.label)
+    if node.edge_length:
+        output_stream.write(':' + str(node.edge_length))
+    
 process_node(tree.seed_node, 0)
-output_string += ";"
-print(output_string)
 
+# Need a ; at the end of the newick
+output_stream.write(';\n')
