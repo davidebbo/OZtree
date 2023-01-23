@@ -21,7 +21,7 @@ taxa = ["Glires", "Primates", "Scandentia"]
 taxa = ["Rodentia", "Lagomorpha", "Primates", "Dermoptera", "Tupaia"]
 taxa = ["Sylvilagus_nuttallii", "Trichechus_manatus", "Pan_ppaniscus", "Canis_lupus",
         "Ornithorhynchus_anatinus", "Discoglossus_montalentii", "Heterodontus_japonicus"]
-taxa = ["Tupaia_chrysogaster", "Tupaia_belangeri", "Canis_lupus", "Tupaia_montana", "Tupaia_moellendorffi"]
+taxa = ["qTupaia_chrysogaster", "Tupaia_belangeri", "Canis_lupus", "Tupaia_montana", "Tupaia_moellendorffi"]
 
 tree = args.treefile.read()
 
@@ -58,7 +58,7 @@ while taxa or len(nodes) >= 2:
 
     match_taxon = taxon_regex.match(match_full_name.group())
     if (match_taxon):
-        # taxon_count += 1
+        taxon_count += 1
 
         taxon = match_taxon.group(1)
         if taxon in taxa:
