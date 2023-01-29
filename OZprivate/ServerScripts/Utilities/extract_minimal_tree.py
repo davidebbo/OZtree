@@ -6,23 +6,22 @@ import re
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('treefile', type=argparse.FileType('r'), nargs='?', default=sys.stdin, help='The tree file in newick form')
+parser.add_argument('outfile', type=argparse.FileType('w'), nargs='?', default=sys.stdout, help='The output tree file')
+parser.add_argument('--taxa', '-t', nargs='+', required=True, help='the taxon to search for')
+parser.add_argument('--expand_taxa', '-x', action=argparse.BooleanOptionalAction, help='the taxon to search for')
 args = parser.parse_args()
 
+taxa = args.taxa
+expand_taxa = args.expand_taxa
 
-taxa = ["Primates"]
-taxa = ["Piliocolobus_badius"]
-taxa = ["Homininae"]
-taxa = ["Vicugna", "Pan_paniscus"]
-taxa = ["Camelidae"]
-taxa = ["Bad"]
-taxa = ["Vicugna", "Homininae"]
-taxa = ["Rodentia", "Lagomorpha", "Primates", "Dermoptera", "Tupaia"]
-taxa = ["Glires", "Primates", "Scandentia"]
-taxa = ["Rodentia", "Lagomorpha", "Primates", "Dermoptera", "Tupaia"]
-taxa = ["Sylvilagus_nuttallii", "Trichechus_manatus", "Pan_ppaniscus", "Canis_lupus",
-        "Ornithorhynchus_anatinus", "Discoglossus_montalentii", "Heterodontus_japonicus"]
-taxa = ["qTupaia_chrysogaster", "Tupaia_belangeri", "Canis_lupus", "Tupaia_montana", "Tupaia_moellendorffi"]
+# If not specified, only expand if there is only one taxon, since it's not meaningful
+# to ask for a single non-expanded taxon
+if not expand_taxa:
+    expand_taxa = len(taxa) == 1
 
+# Read the whole file as a string. This is not ideal, but it's still
+# very fast even with the full OpenTree tree.
+# This could be optimized to read by chunks, with more complexity
 tree = args.treefile.read()
 
 # We build the node list as we find them and process them
@@ -33,8 +32,6 @@ index_stack = []
 
 whole_token_regex = re.compile('[^(),;]*')
 taxon_regex = re.compile('^(\w*)_ott\d*(:[\d\.]*)?')
-
-taxon_count=0
 
 while taxa or len(nodes) >= 2:
     if index == len(tree) or tree[index] == ';':
@@ -48,8 +45,13 @@ while taxa or len(nodes) >= 2:
     closed_brace = tree[index] == ')'
     if closed_brace:
         index += 1
+
+        # Set the start index to the benining of the taxon (where the open parenthesis is)
         start_index = index_stack.pop()
-        start_index = index
+
+        # But if we're not supposed to expand the taxon, just set it here, skipping the whole (...) block
+        if not expand_taxa:
+            start_index = index
     else:
         start_index = index
 
@@ -58,8 +60,6 @@ while taxa or len(nodes) >= 2:
 
     match_taxon = taxon_regex.match(match_full_name.group())
     if (match_taxon):
-        taxon_count += 1
-
         taxon = match_taxon.group(1)
         if taxon in taxa:
             # We've found a taxon, so remove it from the list, and create a node for it
@@ -87,8 +87,6 @@ while taxa or len(nodes) >= 2:
         index += 1
 
 if taxa:
-    print(f"Could not find target taxon '{taxa[0]}' in the tree")
+    args.outfile.write(f"Could not find target taxon '{taxa[0]}' in the tree\n")
 else:
-    print(nodes[0]['tree_string'] + ";")
-
-print(f"Taxon count: {taxon_count}")
+    args.outfile.write(nodes[0]['tree_string'] + ";\n")
