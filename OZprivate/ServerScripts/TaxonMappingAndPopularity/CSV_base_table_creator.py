@@ -851,6 +851,10 @@ def percolate_popularity(
             logging.warning(f"Problem reporting on focal taxon '{focal_taxon}': {e}")
 
 def main(args):
+    logging.basicConfig(
+        format='%(asctime)s %(message)s',
+        level=logging.INFO,
+        datefmt='%Y-%m-%d %H:%M:%S')
     random_seed_addition = 1234
     start = time.time()
     if args.verbosity==0:
