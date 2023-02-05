@@ -31,7 +31,7 @@ index = 0
 index_stack = []
 
 whole_token_regex = re.compile('[^(),;]*')
-taxon_regex = re.compile('^(\w*)_ott\d*(:[\d\.]*)?')
+taxon_regex = re.compile('^(\w*?)(?:_ott(\d+))?(:[\d\.]*)?$')
 
 while taxa or len(nodes) >= 2:
     if index == len(tree) or tree[index] == ';':
