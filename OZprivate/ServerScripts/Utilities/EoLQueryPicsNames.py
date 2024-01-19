@@ -31,6 +31,7 @@ from datetime import datetime
 from requests.packages.urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
 from itertools import islice
+from db_helper import connect_to_database,read_configuration_file
 
 ## Local packages
 from getEOL_crops import subdir_name, get_credit, get_file_from_json_struct, convert_rating
@@ -224,7 +225,7 @@ def lookup_and_save_auto_EoL_info(eol_page_to_ott, sess, API_key, db_connection,
         'maps_per_page'  : 0,
         'texts_per_page' : 0,
         'iucn'           : 'false',
-        'licenses'       : 'pd|cc-by|cc-by-sa', #change this to get objects distributed under different licences
+        # 'licenses'       : 'pd|cc-by|cc-by-sa', #change this to get objects distributed under different licences
         'details'        : 'true',
         'references'     : 'false',
         'synonyms'       : 'false',
@@ -608,22 +609,8 @@ if __name__ == "__main__":
         logging.basicConfig(level=logging.EXTREME_DEBUG) #super-verbose output 
     
     if args.database is None or args.EOL_API_key is None:
-        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), default_appconfig_file)) as conf:
-            conf_type=None
-            for line in conf:
-            #look for [db] line, followed by uri
-                m = re.match(r'\[([^]]+)\]', line)
-                if m:
-                    conf_type = m.group(1)
-                if conf_type == 'db' and args.database is None:
-                    m = re.match('uri\s*=\s*(\S+)', line)
-                    if m:
-                        args.database = m.group(1)
-                elif conf_type == 'api' and args.EOL_API_key is None:
-                    m = re.match('eol_api_key\s*=\s*(\S+)', line)
-                    if m:
-                        args.EOL_API_key = m.group(1)
-                    
+        args.database, args.EOL_API_key = read_configuration_file(default_appconfig_file, args.database, args.EOL_API_key)
+        
     if args.output_dir is None:
         args.output_dir = os.path.join( # up 3 levels from script, then down
             os.path.dirname(os.path.abspath(__file__)), 
@@ -642,32 +629,7 @@ if __name__ == "__main__":
                     status_forcelist=[ 500, 502, 503, 504 ])
     s.mount('https://', HTTPAdapter(max_retries=retries))
     
-    if args.database.startswith("sqlite://"):
-        from sqlite3 import dbapi2 as sqlite
-        db_connection = sqlite.connect(os.path.relpath(args.database[len("sqlite://"):], args.treedir))
-        datetime_now = "datetime('now')";
-        subs="?"
-        
-    elif args.database.startswith("mysql://"): #mysql://<mysql_user>:<mysql_password>@localhost/<mysql_database>
-        import pymysql
-        match = re.match(r'mysql://([^:]+):([^@]*)@([^/]+)/([^?]*)', args.database.strip())
-        if match.group(2) == '':
-            #enter password on the command line, if not given (more secure)
-            if args.script:
-                pw = input("pw: ")
-            else:
-                from getpass import getpass
-                pw = getpass("Enter the sql database password: ")
-        else:
-            pw = match.group(2)
-        db_connection = pymysql.connect(user=match.group(1), passwd=pw, host=match.group(3), db=match.group(4), port=3306, charset='utf8mb4')
-        datetime_now = "NOW()"
-        diff_minutes=lambda a,b: 'TIMESTAMPDIFF(MINUTE,{},{})'.format(a,b)
-        subs="%s"
-    else:
-        logger.error("No recognized database specified: {}".format(args.database))
-        sys.exit()
-
+    db_connection, datetime_now, subs = connect_to_database(args.database, None, args.script)
     batch_size=15
     if args.UPDATE_FROM_RESERVATIONS:
         db_curs = db_connection.cursor()
